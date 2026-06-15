@@ -1,0 +1,89 @@
+name: Build macOS App
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write  # 태그 릴리스 생성에 필요
+
+jobs:
+  test:
+    name: 테스트 (Apple Silicon)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: 의존성 설치
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: 코어/라이브러리/해석기/LLM/GUI 테스트
+        run: |
+          python sfx_generator/test_engine.py
+          python sfx_generator/test_library.py
+          python sfx_generator/test_interpreter.py
+          python sfx_generator/test_llm.py
+          QT_QPA_PLATFORM=offscreen python sfx_generator/test_gui_smoke.py
+      - name: CLI 스모크(프롬프트→WAV)
+        run: |
+          python -m sfx_generator.cli --prompt "웅장하고 묵직한 폭발 임팩트" --out ./ci_out
+          test -n "$(ls ./ci_out/*.wav)"
+
+  build:
+    name: .app 빌드 (Apple Silicon)
+    needs: test
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: 의존성 + PyInstaller 설치
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+      - name: PyInstaller 번들 빌드
+        run: pyinstaller --noconfirm --clean SFX_Generator.spec
+      - name: 빌드 산출물 확인
+        run: test -d "dist/SFX_Generator.app" && echo "✅ .app 생성 확인"
+
+      # zip: ditto로 한 겹만(--keepParent). sequesterRsrc는 일부 환경에서
+      # 압축 해제 호환 문제를 일으켜 제거.
+      - name: .app → zip
+        run: |
+          cd dist
+          ditto -c -k --keepParent "SFX_Generator.app" "SFX_Generator-macos-arm64.zip"
+
+      # dmg: 맥 배포에 가장 안정적. 더블클릭 → 드래그로 설치.
+      - name: .app → dmg
+        run: |
+          hdiutil create -volname "SFX_Generator" \
+            -srcfolder "dist/SFX_Generator.app" \
+            -ov -format UDZO "dist/SFX_Generator-macos-arm64.dmg"
+
+      - name: 아티팩트 업로드 (zip + dmg)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SFX_Generator-macos-arm64
+          path: |
+            dist/SFX_Generator-macos-arm64.zip
+            dist/SFX_Generator-macos-arm64.dmg
+
+      - name: 태그 릴리스(zip + dmg 첨부)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/SFX_Generator-macos-arm64.zip
+            dist/SFX_Generator-macos-arm64.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
