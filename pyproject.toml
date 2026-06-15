@@ -1,0 +1,15 @@
+[project]
+name = "sfx-generator"
+version = "1.4.0"
+description = "보유 라이브러리 변형·결합 + 절차적 합성으로 저작권 프리 방송 효과음을 만드는 도구"
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Yu Byungwook" }]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+ignore = ["E501", "BLE001"]

@@ -1,0 +1,11 @@
+# ── 코어 엔진(런타임 필수) ──
+numpy>=1.26
+scipy>=1.11
+soundfile>=0.12
+pydantic>=2.5
+pedalboard>=0.9
+pyloudnorm>=0.1
+# ── GUI (QtWidgets/QtCore/QtGui만 사용 → Essentials로 .app 용량 절감) ──
+PySide6-Essentials>=6.6
+# ── 오디오 재생(선택). 백엔드 없으면 재생만 비활성화됨. ──
+sounddevice>=0.4

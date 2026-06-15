@@ -1,0 +1,8 @@
+# real 모드(Stable Audio Open) 의존성 — 앱과 분리된 별도 venv에 설치
+torch>=2.2
+diffusers>=0.27
+transformers>=4.40
+soundfile
+numpy
+huggingface_hub>=0.20
+# (mock 모드는 numpy, soundfile만 있으면 됨)
